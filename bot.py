@@ -1,11 +1,13 @@
 import discord
 from discord.ext import flags, commands
 from dotenv import load_dotenv
+import logging
 import os
 import platform
 import praw
 from random import randint
 import time
+
 
 load_dotenv()
 
@@ -17,6 +19,14 @@ VERSION = os.getenv('VERSION')
 
 bot = commands.Bot(command_prefix = '?')
 bot.remove_command('help')
+
+logging.basicConfig(
+    level = logging.INFO, 
+    filename = "app.log", 
+    filemode = "w",
+    format = '%(asctime)s - %(levelname)s : %(message)s')
+
+logging_bool = False
 
 
 @bot.listen()
@@ -43,8 +53,9 @@ async def help(ctx):
     output = discord.Embed(
                     type = "rich", 
                     title = "Osrik Bot: Help", 
-                    description = "Osrik best dwarf, make Death God happy.")
-    output.add_field(name = "Commands", value = "`o.beep` - Makes Leah giggle.\n`o.barkeep` - Provides daily meme intake")
+                    description = "Osrik-Bot is a hobby bot designed for the server *'The Legend of Jaina'*. This bot is mainly designed for memes or whatever weird shit we want on a whim.")
+    output.add_field(name = "Useful Commands", value = "`o.help` - ...How did you get here\n`o.beep` - Makes Leah giggle.\n`o.barkeep` - Provides daily meme intake", inline=False)
+    output.add_field(name = "Admin Commands", value = "`o.logs [-on/-off] [True/False]` - Turns on or off logging", inline=False)
     await ctx.send(embed = output)
 
 
@@ -74,15 +85,14 @@ async def barkeep(ctx):
     Returns:
     Embed with an image randomly selected 
     '''
-    # timer start
-    start_time = time.perf_counter()
+    if logging_bool:
+        start_time = time.perf_counter()
 
     ua_string = f"{platform.system()}:{CLIENT_ID}:v{VERSION} (by u/{USERNAME})"
     img_list = []
     count = 0
     size = 10
-    num = randint(0,size)
-
+    
     reddit = praw.Reddit(
         user_agent = ua_string,
         client_id = CLIENT_ID,
@@ -96,6 +106,8 @@ async def barkeep(ctx):
             count += 1
         except:
             continue
+
+    num = randint(0,count)
     
     output = discord.Embed(
                 type = "rich",
@@ -107,9 +119,34 @@ async def barkeep(ctx):
     output.set_image(url = img_list[num][1])
     output.set_footer(text = "Courtesy of r/dndmemes.")
     await ctx.send(embed = output)
-    end_time = time.perf_counter()
+    
+    if logging_bool:
+        end_time = time.perf_counter()
+        logging.info(f"Barkeep command took {end_time - start_time:0.4f} seconds to run")
 
-    print(f"Barkeep command took {end_time - start_time:0.4f} seconds")
+@flags.add_flag("-on", type=bool, default=False)
+@flags.add_flag("-off", type=bool, default=False)
+@flags.command()
+async def logs(ctx, **flags):
+    output = discord.Embed(
+        type = "rich",
+        title = "Osrik Logging"
+    )
+    def log_switch(switch_string):
+        desc = f"Logging has been turned {switch_string}"
+        output.description = desc
+        print(desc)
+
+    if flags['on']:
+        logging_bool = True
+        log_switch("**ON**")
+    elif flags['off']:
+        logging_bool = False
+        log_switch("**OFF**")
+
+    await ctx.send(embed = output)
+bot.add_command(logs)
+
 
 # Test command for playing around.
 @flags.add_flag("--arg")
