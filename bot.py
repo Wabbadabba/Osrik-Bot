@@ -1,12 +1,22 @@
-import os
 import discord
 from discord.ext import flags, commands
 from dotenv import load_dotenv
-import argparse
+import os
+import platform
+import praw
+from random import randint
+import time
 
 load_dotenv()
+
 TOKEN = os.getenv('DISCORD_TOKEN')
-bot = commands.Bot(command_prefix = 'o.')
+CLIENT_ID = os.getenv('CLIENT_ID')
+SECRET = os.getenv('SECRET')
+USERNAME = os.getenv('REDDIT_USERNAME')
+VERSION = os.getenv('VERSION')
+
+bot = commands.Bot(command_prefix = '?')
+bot.remove_command('help')
 
 
 @bot.listen()
@@ -22,7 +32,7 @@ async def on_ready():
         print(f'{bot.user} has connected to {guild.name}!')
 
 @bot.command()
-async def ohelp(ctx):
+async def help(ctx):
     '''
     Displays a list of the commands available with this bot.
 
@@ -30,14 +40,16 @@ async def ohelp(ctx):
     An Embed with details on the commands available.
     '''
 
-    help_text = discord.Embed(type = "rich", 
-                                title = "Osrik Bot: Help", 
-                                description = "Osrik best dwarf, make Death God happy.")
-    help_text.add_field(name = "Commands", value = "`o.beep` - Makes Leah giggle.")
-    await ctx.send(embed = help_text)
-    await ctx.message.delete()
+    output = discord.Embed(
+                    type = "rich", 
+                    title = "Osrik Bot: Help", 
+                    description = "Osrik best dwarf, make Death God happy.")
+    output.add_field(name = "Commands", value = "`o.beep` - Makes Leah giggle.\n`o.barkeep` - Provides daily meme intake")
+    await ctx.send(embed = output)
 
-@bot.command(pass_context=True)
+
+
+@bot.command()
 async def beep(ctx):
     '''
     Displays an Embed with a gif of the Beep Beep meme
@@ -46,14 +58,55 @@ async def beep(ctx):
     An Embed with a gif attached.
     '''
 
-    beep_msg = discord.Embed(type = "rich", 
-                                title = "Beep Beep", 
-                                description = "Who got the keys to the Jeep?")
-    beep_msg.set_image(url="https://i.imgur.com/asTlXyF.gif")
-    beep_msg.set_footer(text="Paid for by the National Fire Alarm Repalcement Service")
-    await ctx.send(embed = beep_msg)
-    await ctx.message.delete()
+    output = discord.Embed(
+                    type = "rich", 
+                    title = "Beep Beep", 
+                    description = "Who got the keys to the Jeep?")
+    output.set_image(url="https://i.imgur.com/asTlXyF.gif")
+    output.set_footer(text="Paid for by the National Fire Alarm Repalcement Service")
+    await ctx.send(embed = output)
 
+@bot.command()
+async def barkeep(ctx):
+    '''
+    Pulls post images from r/dndmemes and chooses one at random to display in an Embed
+
+    Returns:
+    Embed with an image randomly selected 
+    '''
+    # timer start
+    start_time = time.perf_counter()
+
+    ua_string = f"{platform.system()}:{CLIENT_ID}:v{VERSION} (by u/{USERNAME})"
+    img_list = []
+    count = 0
+    size = 10
+
+    reddit = praw.Reddit(
+        user_agent = ua_string,
+        client_id = CLIENT_ID,
+        client_secret = SECRET
+    )
+    
+    for post in reddit.subreddit("dndmemes").new(limit=size):
+        try:
+            img_link = post._fetch_data()[0]['data']['children'][0]['data']['preview']['images'][0]['source']['url']
+            img_list.append(img_link)
+            count += 1
+        except:
+            continue
+    
+    output = discord.Embed(
+                type = "rich",
+                title = "The BarKeep slides another hot meme your way..."
+    )
+
+    output.set_image(url = img_list[randint(0,size)])
+    output.set_footer(text = "Courtesy of r/dndmemes.")
+    await ctx.send(embed = output)
+    end_time = time.perf_counter()
+
+    print(f"Barkeep command took {end_time - start_time:0.4f} seconds")
 
 # Test command for playing around.
 @flags.add_flag("--arg")
