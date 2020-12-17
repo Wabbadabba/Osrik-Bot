@@ -81,6 +81,7 @@ async def barkeep(ctx):
     img_list = []
     count = 0
     size = 10
+    num = randint(0,size)
 
     reddit = praw.Reddit(
         user_agent = ua_string,
@@ -91,17 +92,19 @@ async def barkeep(ctx):
     for post in reddit.subreddit("dndmemes").new(limit=size):
         try:
             img_link = post._fetch_data()[0]['data']['children'][0]['data']['preview']['images'][0]['source']['url']
-            img_list.append(img_link)
+            img_list.append([post.title,img_link])
             count += 1
         except:
             continue
     
     output = discord.Embed(
                 type = "rich",
-                title = "The BarKeep slides another hot meme your way..."
+                title = "The BarKeep slides another hot meme your way...",
+                description = img_list[num][0]
+
     )
 
-    output.set_image(url = img_list[randint(0,size)])
+    output.set_image(url = img_list[num][1])
     output.set_footer(text = "Courtesy of r/dndmemes.")
     await ctx.send(embed = output)
     end_time = time.perf_counter()
