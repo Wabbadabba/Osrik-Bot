@@ -1,3 +1,4 @@
 discord.py
 discord-flags
 python-dotenv
+praw
